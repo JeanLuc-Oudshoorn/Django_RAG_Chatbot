@@ -157,7 +157,7 @@ p[sentTime]:hover::after {
   max-width: 80%;
 }
 
-.chatbot-message {
+.chatbot-message, .opening-message {
   background-color: #f0f0f0;
   align-self: flex-start;
   border-radius: 15px 15px 15px 0;
@@ -166,3 +166,7 @@ p[sentTime]:hover::after {
   max-width: 80%;
 }
 
+/* If needed, override any conflicting styles for the opening message */
+.opening-message {
+  background-color: #f0f0f0 !important;
+}

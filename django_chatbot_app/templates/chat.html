@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="text-center mb-4">
-    <h1 class="display-4 smaller-heading">AI Assistent</h1>
+    <h1 class="display-4 smaller-heading">Q-Assistant AI</h1>
 </div>
 <div id="chatbot" hx-ext="ws" ws-connect="/ws/ai-demo/{{ conversation.id }}/" class="card">
     <div class="card-body">
@@ -14,7 +14,7 @@
                     </div>
                 {% endfor %}
             {% else %}
-                <div class="chatbot-message mb-2">
+                <div class="chatbot-message2" style="background-color: white !important; align-self: flex-start; border-radius: 15px 15px 15px 0; padding: 10px 15px; margin: 5px 0; max-width: 80%; font-size: 1.1em;">
                     Stuur een vraag over voedselveiligheid om een gesprek te beginnen.
                 </div>
             {% endif %}
