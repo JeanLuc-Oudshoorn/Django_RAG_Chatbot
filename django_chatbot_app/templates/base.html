@@ -8,20 +8,23 @@
     <link rel="icon" href="{% static 'favicon.ico' %}">
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro&display=swap" rel="stylesheet">
-    
-    <title>Chatbot</title>
-    
+
+    <title>Voedselveiligheid AI assistent</title>
+
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="{% static 'bootstrap/css/bootstrap.min.css' %}">
     <!-- Custom CSS-->
     <link rel="stylesheet" href="{% static 'style.css' %}" />
 
 </head>
-<body class="bg-light">
-    <div class="container py-5">
-        {% block content %}
-        {% endblock %}
-    </div>
+<body class="d-flex flex-column min-vh-100">
+    {% include 'navbar.html' %}
+    <main class="flex-grow-1">
+        <div class="container py-5">
+            {% block content %}
+            {% endblock %}
+        </div>
+    </main>
     <!-- HTMX -->
     <script src="{% static 'htmx/htmx.min.js' %}"></script>
     <!-- HTMX websocket extension -->

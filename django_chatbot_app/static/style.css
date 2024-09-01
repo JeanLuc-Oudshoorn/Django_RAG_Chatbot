@@ -37,7 +37,7 @@ body {
 
 
 .conversation {
-  height: 500px;
+  height: 60vh;
   overflow-y: auto;
   padding: 20px;
   display: flex;
@@ -147,4 +147,22 @@ p[sentTime]:hover::after {
     text-shadow: .25em 0 0 black, .5em 0 0 black;
   }
 }
-  
+
+.user-message {
+  background-color: #e6f2ff;
+  align-self: flex-end;
+  border-radius: 15px 15px 0 15px;
+  padding: 10px 15px;
+  margin: 5px 0;
+  max-width: 80%;
+}
+
+.chatbot-message {
+  background-color: #f0f0f0;
+  align-self: flex-start;
+  border-radius: 15px 15px 15px 0;
+  padding: 10px 15px;
+  margin: 5px 0;
+  max-width: 80%;
+}
+

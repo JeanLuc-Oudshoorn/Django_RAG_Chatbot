@@ -6,16 +6,40 @@ from openai import AsyncOpenAI
 from .models import ChatConversation
 from django.template.loader import render_to_string
 from channels.db import database_sync_to_async
+import faiss
+import numpy as np
+from sentence_transformers import SentenceTransformer
 
 class ChatConsumer(AsyncWebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.faiss_index = None
+        self.embeddings = None
+        self.documents = None
+        self.metadata = None
+        self.encoder = SentenceTransformer('all-MiniLM-L6-v2')
+
     async def connect(self):
         self.user = self.scope["user"]
         self.conversation_id = self.scope['url_route']['kwargs']['conversation_id']
         if self.user.is_authenticated:
             self.messages = await self.fetch_conversation(self.conversation_id)
+            await self.initialize_faiss()
             await self.accept()
         else:
             await self.close()
+
+    @database_sync_to_async
+    def initialize_faiss(self):
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        faiss_index_path = os.path.join(base_dir, "django_chatbot_app", "documents", "output_docs", "faiss_index.faiss")
+        documents_path = os.path.join(base_dir, "django_chatbot_app", "documents", "output_docs", "documents.npy")
+        metadata_path = os.path.join(base_dir, "django_chatbot_app", "documents", "output_docs", "metadata.json")
+        
+        self.faiss_index = faiss.read_index(faiss_index_path)
+        self.documents = np.load(documents_path, allow_pickle=True)
+        with open(metadata_path, 'r') as f:
+            self.metadata = json.load(f)
 
     async def disconnect(self, close_code):
         if self.user.is_authenticated:
@@ -24,6 +48,26 @@ class ChatConsumer(AsyncWebsocketConsumer):
             if not self.messages:
                 await self.delete_conversation(self.conversation_id)
 
+    async def retrieve_relevant_documents(self, query, k=6):
+        query_vector = await self.encode_query(query)
+        distances, indices = await self.search_faiss(query_vector, k)
+        
+        relevant_docs = []
+        for i in indices[0]:
+            doc = self.documents[i]
+            meta = self.metadata[i]
+            relevant_docs.append((doc, meta['source']))
+        
+        return relevant_docs
+
+    @database_sync_to_async
+    def encode_query(self, query):
+        return self.encoder.encode([query])[0]
+
+    @database_sync_to_async
+    def search_faiss(self, query_vector, k):
+        return self.faiss_index.search(np.array([query_vector]), k)   
+
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
         message_text = text_data_json["message"]
@@ -31,10 +75,31 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not message_text.strip():
             return
 
+        relevant_docs = await self.retrieve_relevant_documents(message_text)
+
+        context = "\n\n".join([f"Document Titel: {source}\n Inhoud: {doc}" for doc, source in relevant_docs])
+
+        prompt = f"""
+Je bent een expert op het gebied van voedselveiligheid in de Europese Unie. 
+Je bent verantwoordelijk voor het verstrekken van correcte informatie aan de Europese burgers.
+Denk stap voor stap voordat je de vraag beantwoordt.
+
+Instructies:
+1. Beantwoordt alleen vragen over voedselveiligheid.
+2. Beantwoordt de vraag op basis van de gegeven context.
+3. Benoem altijd de titel van de gebruikte documenten in het antwoord.
+4. Als er niet genoeg relevante informatie is om de vraag te beantwoorden, geef dit dan aan. Verzin geen antwoord.
+
+Context: {context}
+
+Vraag: {message_text}
+
+Antwoord:"""
+
         self.messages.append(
             {
                 "role": "user",
-                "content": message_text,
+                "content": prompt,
             }
         )
 
@@ -91,7 +156,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def save_conversation(self, id, new_messages):
         chat = ChatConversation.objects.get(id=id, user=self.user)
-        chat.conversation = new_messages
+        # Remove the context from user messages before saving
+        cleaned_messages = []
+        for message in new_messages:
+            if message["role"] == "user":
+                content = message["content"].split("Question: ")[-1].split("\n\nAnswer:")[0]
+                cleaned_messages.append({"role": "user", "content": content})
+            else:
+                cleaned_messages.append(message)
+        chat.conversation = cleaned_messages
         chat.save()
         
     @database_sync_to_async
