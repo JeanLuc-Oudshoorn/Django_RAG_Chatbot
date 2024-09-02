@@ -2,13 +2,13 @@ import json
 import os
 import uuid
 from channels.generic.websocket import AsyncWebsocketConsumer
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, OpenAI
 from .models import ChatConversation
 from django.template.loader import render_to_string
 from channels.db import database_sync_to_async
 import faiss
 import numpy as np
-from sentence_transformers import SentenceTransformer
+
 
 class ChatConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
@@ -17,7 +17,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.embeddings = None
         self.documents = None
         self.metadata = None
-        self.encoder = SentenceTransformer('all-MiniLM-L6-v2')
+        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     async def connect(self):
         self.user = self.scope["user"]
@@ -35,7 +35,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         faiss_index_path = os.path.join(base_dir, "django_chatbot_app", "documents", "output_docs", "faiss_index.faiss")
         documents_path = os.path.join(base_dir, "django_chatbot_app", "documents", "output_docs", "documents.npy")
         metadata_path = os.path.join(base_dir, "django_chatbot_app", "documents", "output_docs", "metadata.json")
-        
+
         self.faiss_index = faiss.read_index(faiss_index_path)
         self.documents = np.load(documents_path, allow_pickle=True)
         with open(metadata_path, 'r') as f:
@@ -48,25 +48,30 @@ class ChatConsumer(AsyncWebsocketConsumer):
             if not self.messages:
                 await self.delete_conversation(self.conversation_id)
 
-    async def retrieve_relevant_documents(self, query, k=6):
+    async def retrieve_relevant_documents(self, query, k=4):
         query_vector = await self.encode_query(query)
         distances, indices = await self.search_faiss(query_vector, k)
-        
+
         relevant_docs = []
         for i in indices[0]:
             doc = self.documents[i]
             meta = self.metadata[i]
             relevant_docs.append((doc, meta['source']))
-        
+
         return relevant_docs
 
     @database_sync_to_async
     def encode_query(self, query):
-        return self.encoder.encode([query])[0]
+        response = self.client.embeddings.create(
+            input=query,
+            model="text-embedding-3-small"
+        )
+        embedding = response.data[0].embedding
+        return embedding
 
     @database_sync_to_async
     def search_faiss(self, query_vector, k):
-        return self.faiss_index.search(np.array([query_vector]), k)   
+        return self.faiss_index.search(np.array([query_vector]), k)
 
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
@@ -78,6 +83,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         relevant_docs = await self.retrieve_relevant_documents(message_text)
 
         context = "\n\n".join([f"Document Titel: {source}\n Inhoud: {doc}" for doc, source in relevant_docs])
+
+        print(context)
 
         prompt = f"""
 Je bent een expert op het gebied van voedselveiligheid in de Europese Unie. 
@@ -160,13 +167,13 @@ Antwoord:"""
         cleaned_messages = []
         for message in new_messages:
             if message["role"] == "user":
-                content = message["content"].split("Question: ")[-1].split("\n\nAnswer:")[0]
+                content = message["content"].split("Vraag: ")[-1].split("\n\nAntwoord:")[0]
                 cleaned_messages.append({"role": "user", "content": content})
             else:
                 cleaned_messages.append(message)
         chat.conversation = cleaned_messages
         chat.save()
-        
+
     @database_sync_to_async
     def delete_conversation(self, id):
         try:

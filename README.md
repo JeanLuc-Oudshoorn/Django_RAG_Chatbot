@@ -8,6 +8,7 @@ While searching for an example of a Django-based chatbot powered by OpenAI and f
 * Asynchronous Streaming: This project leverages the HTMX websockets extension and Django's AsyncWebsocketConsumer to achieve real-time, streaming interactions with the chatbot.
 * OpenAI Integration: Utilizes AsyncOpenAI for seamless communication with OpenAI's API, ensuring that the chatbot responses are both prompt and scalable.
 * Conversation History: Enhances user experience by maintaining a history of interactions, allowing the chatbot to provide contextually relevant responses.
+* Retrieval Augmented Generation: Incorporates a Retrieval Augmented Generation (RAG) model to improve the quality of responses by leveraging external knowledge sources.
 
 Can be adapted to work with open-source Large Language Models like Llama-3, provided that the HTTP client *handling communications with the LLM supports asynchronous operations.
 
