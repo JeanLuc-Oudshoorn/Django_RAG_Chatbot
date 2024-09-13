@@ -1,20 +1,21 @@
 {% extends 'base.html' %}
 
+{% load markdownify %}
 {% block content %}
 <div class="text-center mb-4">
-    <h1 class="display-4 smaller-heading">Q-Assistant AI</h1>
+    <h1 class="display-4 smaller-heading">AI Assistant</h1>
 </div>
 <div id="chatbot" hx-ext="ws" ws-connect="/ws/ai-demo/{{ conversation.id }}/" class="card">
     <div class="card-body">
-        <div class="conversation" id="message-list">
+        <div class="conversation" id="message-list" style="display: flex; flex-direction: column;">
             {% if conversation.conversation %}
                 {% for message in conversation.conversation %}
                     <div class="{% if message.role == 'user' %}user-message{% else %}chatbot-message{% endif %} mb-2">
-                        {{ message.content }}
+                        {% autoescape off %} {{ message.content|markdownify|safe }} {% endautoescape %}
                     </div>
                 {% endfor %}
             {% else %}
-                <div class="chatbot-message2" style="background-color: white !important; align-self: flex-start; border-radius: 15px 15px 15px 0; padding: 10px 15px; margin: 5px 0; max-width: 80%; font-size: 1.1em;">
+                <div class="opening-message">
                     Stuur een vraag over voedselveiligheid om een gesprek te beginnen.
                 </div>
             {% endif %}
@@ -29,15 +30,31 @@
         </form>
     </div>
 </div>
+<div class="text-center mt-3">
+    <small>Antwoorden worden gegenereerd met hulp van AI. Controleer altijd de juistheid van antwoorden alvorens deze te gebruiken.</small>
+</div>
 <script>
   // clear message input after sending our new message
   document.body.addEventListener('htmx:wsAfterSend', function(evt) {
     document.getElementById("input-field").value = "";
   });
-  // scroll to bottom of chat after every incoming message
+    // scroll to bottom of chat after every incoming message
   document.body.addEventListener('htmx:wsAfterMessage', function(evt) {
     const chatUI = document.getElementById('message-list');
     chatUI.scrollTop = chatUI.scrollHeight;
   });
+
+  document.body.addEventListener('htmx:wsBeforeSend', function(evt) {
+    document.getElementById("input-field").disabled = true;
+    document.getElementById("submit-button").disabled = true;
+  });
+     // disable send button while response is being generated
+  document.body.addEventListener('htmx:wsAfterMessage', function(evt) {
+    document.getElementById("input-field").disabled = false;
+    document.getElementById("submit-button").disabled = false;
+    const chatUI = document.getElementById('message-list');
+    chatUI.scrollTop = chatUI.scrollHeight;
+  });
 </script>
+
 {% endblock %}

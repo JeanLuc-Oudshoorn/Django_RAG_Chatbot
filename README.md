@@ -1,7 +1,5 @@
 # Django OpenAI-Powered Chatbot with HTMX Streaming
 
-![Demo](images/demo.gif)
-
 While searching for an example of a Django-based chatbot powered by OpenAI and featuring asynchronous streaming, I found no suitable examples that incorporated HTMX and async. This prompted me to put together this repository.
 
 ### Key Features
@@ -9,6 +7,9 @@ While searching for an example of a Django-based chatbot powered by OpenAI and f
 * OpenAI Integration: Utilizes AsyncOpenAI for seamless communication with OpenAI's API, ensuring that the chatbot responses are both prompt and scalable.
 * Conversation History: Enhances user experience by maintaining a history of interactions, allowing the chatbot to provide contextually relevant responses.
 * Retrieval Augmented Generation: Incorporates a Retrieval Augmented Generation (RAG) model to improve the quality of responses by leveraging external knowledge sources.
+* Clear Conversation Structure: User messages have a light blue background color and are displayed on the right hand side.
+* Markdown Rendering: Markdown is correctly rendered even with streaming responses.
+* Navigation Bar: New pages can be added to the webapp.
 
 Can be adapted to work with open-source Large Language Models like Llama-3, provided that the HTTP client *handling communications with the LLM supports asynchronous operations.
 

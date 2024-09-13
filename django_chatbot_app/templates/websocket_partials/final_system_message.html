@@ -1,3 +1,4 @@
+{% load markdownify %}
 <div id="{{ contents_div_id }}" class="assistant-message chatbot-text-system mb-2" hx-swap-oob="true">
-    {{ message }}
+    {% autoescape off %} {{ message|markdownify|safe }} {% endautoescape %}
 </div>

@@ -1,4 +1,5 @@
 {% load static %}
+{% load markdownify %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,7 +10,7 @@
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro&display=swap" rel="stylesheet">
 
-    <title>Q-Assistant AI</title>
+    <title>AI Assistant</title>
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="{% static 'bootstrap/css/bootstrap.min.css' %}">
@@ -31,5 +32,8 @@
     <script src="{% static 'htmx/ws.js' %}"></script>
     <!-- Bootstrap Javascript -->
     <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+    <!-- Showdown library -->
+    <script src="https://cdn.jsdelivr.net/npm/showdown@1.9.1/dist/showdown.min.js"></script>
+
 </body>
 </html>

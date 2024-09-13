@@ -6,6 +6,7 @@ from openai import AsyncOpenAI, OpenAI
 from .models import ChatConversation
 from django.template.loader import render_to_string
 from channels.db import database_sync_to_async
+import markdown2
 import faiss
 import numpy as np
 
@@ -84,8 +85,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         context = "\n\n".join([f"Document Titel: {source}\n Inhoud: {doc}" for doc, source in relevant_docs])
 
-        print(context)
-
         prompt = f"""
 Je bent een expert op het gebied van voedselveiligheid in de Europese Unie. 
 Je bent verantwoordelijk voor het verstrekken van correcte informatie aan de Europese burgers.
@@ -132,12 +131,35 @@ Antwoord:"""
         )
 
         full_message = ""
+        chunk_buffer = ""  # Buffer for partial markdown text
+
         async for chunk in stream:
             message_chunk = chunk.choices[0].delta.content
             if message_chunk:
+
+                # Append the incoming chunk to the buffer
+                chunk_buffer += message_chunk
+
+                # Append the incoming chunk to the full message
                 full_message += message_chunk
-                chunk_html = f'<div hx-swap-oob="beforeend:#{contents_div_id}">{message_chunk}</div>'
-                await self.send(text_data=chunk_html)
+
+                # If we detect a full markdown "block" (new line or end of sentence), convert it
+                if "\n" in message_chunk:
+                    # Convert the buffer to HTML after completing a block
+                    html_chunk = markdown2.markdown(chunk_buffer)
+
+                    # Send the converted chunk as HTML to the front end
+                    html_chunk_div = f'<div hx-swap-oob="beforeend:#{contents_div_id}">{html_chunk}</div>'
+                    await self.send(text_data=html_chunk_div)
+
+                    # Reset the buffer since we've processed it
+                    chunk_buffer = ""
+
+        # Ensure any remaining content is sent once the stream ends
+        if chunk_buffer:
+            html_chunk = markdown2.markdown(chunk_buffer)
+            html_chunk_div = f'<div hx-swap-oob="beforeend:#{contents_div_id}">{html_chunk}</div>'
+            await self.send(text_data=html_chunk_div)
 
         self.messages.append(
             {
@@ -145,11 +167,12 @@ Antwoord:"""
                 "content": full_message,
             }
         )
+
         final_message = render_to_string(
             "websocket_partials/final_system_message.html",
             {
                 "contents_div_id": contents_div_id,
-                "message": full_message,
+                "message": markdown2.markdown(full_message),
             },
         )
         await client.close()

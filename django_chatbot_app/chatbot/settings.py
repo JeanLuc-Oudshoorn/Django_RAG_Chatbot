@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'markdownify',
 ]
 
 if ENVIRONMENT == "development":
@@ -179,4 +180,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 ASGI_APPLICATION = 'chatbot.asgi.application'
 
+# Crispy Forms settings
+CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
+MARKDOWNIFY = {
+    "default": {
+        "WHITELIST_TAGS": [
+            "a", "abbr", "acronym", "b", "blockquote", "code", "em", "i", "li", "ol", "p", "strong", "ul",
+        ]
+    }
+}
