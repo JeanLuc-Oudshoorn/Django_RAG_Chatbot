@@ -22,7 +22,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
         self.user = self.scope["user"]
-        self.conversation_id = self.scope['url_route']['kwargs']['conversation_id']
+        self.conversation_id = self.scope["url_route"]["kwargs"]["conversation_id"]
         if self.user.is_authenticated:
             self.messages = await self.fetch_conversation(self.conversation_id)
             await self.initialize_faiss()
@@ -33,13 +33,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def initialize_faiss(self):
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        faiss_index_path = os.path.join(base_dir, "django_chatbot_app", "documents", "output_docs", "faiss_index.faiss")
-        documents_path = os.path.join(base_dir, "django_chatbot_app", "documents", "output_docs", "documents.npy")
-        metadata_path = os.path.join(base_dir, "django_chatbot_app", "documents", "output_docs", "metadata.json")
+        docs = "output_docs_manuals"
+        faiss_index_path = os.path.join(
+            base_dir, "django_chatbot_app", "documents", docs, "faiss_index.faiss"
+        )
+        documents_path = os.path.join(
+            base_dir, "django_chatbot_app", "documents", docs, "documents.npy"
+        )
+        metadata_path = os.path.join(
+            base_dir, "django_chatbot_app", "documents", docs, "metadata.json"
+        )
 
         self.faiss_index = faiss.read_index(faiss_index_path)
         self.documents = np.load(documents_path, allow_pickle=True)
-        with open(metadata_path, 'r') as f:
+        with open(metadata_path, "r") as f:
             self.metadata = json.load(f)
 
     async def disconnect(self, close_code):
@@ -57,16 +64,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         for i in indices[0]:
             doc = self.documents[i]
             meta = self.metadata[i]
-            relevant_docs.append((doc, meta['source']))
+            relevant_docs.append((doc, meta["source"]))
 
         return relevant_docs
 
     @database_sync_to_async
     def encode_query(self, query):
-        response = self.client.embeddings.create(
-            input=query,
-            model="text-embedding-3-small"
-        )
+        response = self.client.embeddings.create(input=query, model="text-embedding-3-small")
         embedding = response.data[0].embedding
         return embedding
 
@@ -83,18 +87,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         relevant_docs = await self.retrieve_relevant_documents(message_text)
 
-        context = "\n\n".join([f"Document Titel: {source}\n Inhoud: {doc}" for doc, source in relevant_docs])
+        context = "\n\n".join(
+            [f"Document Titel: {source}\n Inhoud: {doc}" for doc, source in relevant_docs]
+        )
 
         prompt = f"""
-Je bent een expert op het gebied van voedselveiligheid in de Europese Unie. 
-Je bent verantwoordelijk voor het verstrekken van correcte informatie aan de Europese burgers.
-Denk stap voor stap voordat je de vraag beantwoordt.
+You are an automobile mechanic specialized in repairing Renault cars.
+Your main task is to repair Renault cars according to manual instructions. 
+Think step by step before answering the question.
 
-Instructies:
-1. Beantwoordt alleen vragen over voedselveiligheid.
-2. Beantwoordt de vraag op basis van de gegeven context.
-3. Benoem altijd de titel van de gebruikte documenten in het antwoord.
-4. Als er niet genoeg relevante informatie is om de vraag te beantwoorden, geef dit dan aan. Verzin geen antwoord.
+Instructions:
+1. Answer only questions related to repairing Renault cars.
+2. Answer the question based on the given context.
+3. Always mention the title of the documents used in the answer.
+4. If there is not enough relevant information to answer the question, indicate this. Do not make up an answer.
 
 Context: {context}
 
@@ -149,7 +155,9 @@ Antwoord:"""
                     html_chunk = markdown2.markdown(chunk_buffer)
 
                     # Send the converted chunk as HTML to the front end
-                    html_chunk_div = f'<div hx-swap-oob="beforeend:#{contents_div_id}">{html_chunk}</div>'
+                    html_chunk_div = (
+                        f'<div hx-swap-oob="beforeend:#{contents_div_id}">{html_chunk}</div>'
+                    )
                     await self.send(text_data=html_chunk_div)
 
                     # Reset the buffer since we've processed it
